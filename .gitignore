@@ -1,0 +1,7 @@
+.sites-runtime/
+node_modules/
+*.tar.gz
+.DS_Store
+.openai/
+dist/methodica.pdf
+docs/

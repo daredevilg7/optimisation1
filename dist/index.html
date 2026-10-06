@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Лабораторная работа №1: решения всех 10 вариантов одномерной оптимизации. График, сравнение восьми методов и пошаговые вычисления.">
+  <title>Лабораторная №1 · Оптимизация</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232957dd'/%3E%3Cpath d='M6 8Q16 34 26 8' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="solver.js"></script><script defer src="app.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#variant=1"><span class="brand-mark" aria-hidden="true">∪</span><span>Оптимизация<span class="brand-sub">Лабораторная работа №1</span></span></a>
+    <div class="sidebar-label">ВАРИАНТЫ</div>
+    <nav id="variants" aria-label="Выбор варианта"></nav>
+    <div class="source"><span>Безусловная одномерная<br>оптимизация</span><small>Условия: таблица 3.2, стр. 12<br>МетОпт_ЛР1.pdf</small></div>
+  </aside>
+  <main>
+    <header class="topbar"><span>Методы оптимизации <span class="slash">/</span> Лабораторная №1</span><span class="top-meta">10 вариантов · 8 методов</span></header>
+    <div class="workspace">
+      <div class="page-title"><div><p class="eyebrow">ОДНОМЕРНЫЙ ПОИСК МИНИМУМА</p><h1>Вариант <span id="variant-number">1</span><span class="title-point">.</span></h1></div><label class="mobile-variant">Вариант<select id="mobile-variant" aria-label="Выбор варианта"></select></label><span class="task-label" id="condition-label"></span></div>
+      <section class="overview" aria-label="Условие и решение">
+        <div class="problem">
+          <h2 class="section-label">Целевая функция</h2><div id="formula" class="formula"></div>
+          <div class="problem-data"><div><span>Отрезок поиска</span><strong id="interval"></strong></div><div><span id="parameter-label"></span><strong id="parameter-value"></strong></div></div>
+          <div class="answer"><div class="answer-label">Глобальный минимум<span>Проверка производной и границ</span></div><div class="answer-value"><span>x*</span><strong id="reference-x"></strong></div><div class="answer-secondary"><span>f(x*)</span><strong id="reference-y"></strong></div></div>
+        </div>
+        <div class="plot-section"><div class="plot-heading"><h2>График функции</h2><span class="plot-legend"><i></i> f(x)<i class="minimum"></i> минимум</span></div><div id="plot" class="plot" role="img" aria-label="График целевой функции с точкой глобального минимума"></div><div class="plot-caption"><span id="plot-interval"></span><span>Точка x* найдена независимо от методов поиска</span></div></div>
+      </section>
+      <div class="notice" id="variant-notice" hidden></div>
+      <section class="comparison" aria-labelledby="comparison-title">
+        <div class="section-heading"><div><h2 id="comparison-title">Сравнение методов</h2><p id="comparison-caption"></p></div><span class="small-label">ВЫЧИСЛЯЕТСЯ В БРАУЗЕРЕ</span></div>
+        <form id="settings" class="settings"><div class="segmented" role="group" aria-label="Режим сравнения"><button type="button" id="budget-mode" data-mode="budget">Фиксированное N</button><button type="button" id="epsilon-mode" data-mode="epsilon">Заданная точность ε</button></div><label id="setting-label" for="setting-value"></label><input id="setting-value" name="parameter" type="number" required><button class="calculate" type="submit">Пересчитать</button><span id="settings-error" role="alert"></span></form>
+        <div class="table-wrap"><table class="results"><caption class="sr-only">Результаты восьми методов одномерной оптимизации</caption><thead><tr><th scope="col">Метод</th><th scope="col">x̃</th><th scope="col">f(x̃)</th><th scope="col">Длина L</th><th scope="col">Вызовы f</th><th scope="col">Вызовы f′</th></tr></thead><tbody id="results-body"></tbody></table></div>
+        <div class="comparison-bottom"><p id="comparison-conclusion"></p><span>Выберите метод, чтобы разобрать решение</span></div>
+      </section>
+      <section class="method-detail" aria-labelledby="method-title"><div class="section-heading"><div><p class="eyebrow" id="method-letter"></p><h2 id="method-title"></h2></div><label class="method-select-label">Метод<select id="method-select" aria-label="Метод для пошагового решения"></select></label></div><p class="method-description" id="method-description"></p><div class="equation" id="method-equation"></div><div id="method-result" class="method-result"></div><details id="steps-details"><summary>Пошаговые вычисления<span id="step-count"></span></summary><p class="steps-explanation">В каждой строке показаны проверенные точки и оставшийся после сравнения интервал. Уже известные значения функции используются повторно.</p><div class="steps-controls"><label>Шаг<input type="range" id="step-slider" min="1" max="1" value="1"></label><output id="step-label" for="step-slider"></output><button id="previous-step" type="button" aria-label="Предыдущий шаг">−</button><button id="next-step" type="button" aria-label="Следующий шаг">+</button></div><div id="step-explanation" class="step-explanation"></div><div id="step-interval" class="interval-diagram"></div><div class="table-wrap"><table class="step-table"><thead><tr><th scope="col">Шаг</th><th scope="col">a</th><th scope="col">b</th><th scope="col">L</th><th scope="col">Точки и значения f</th><th scope="col">Вызовы f</th></tr></thead><tbody id="steps-body"></tbody></table></div><button class="more-steps" id="more-steps" type="button" hidden>Показать все шаги</button></details></section>
+      <section class="verification"><details open><summary>Как проверяется правильный ответ</summary><div id="analytic-solution"></div></details><details><summary>Условия сравнения и учёт вычислений</summary><div class="conventions"><p><b>Единый критерий точности.</b> Все методы возвращают x̃ = (a + b)/2 и останавливаются при L = b − a ≤ 2ε. Для унимодальной функции это гарантирует |x̃ − x*| ≤ ε. В методичке для золотого сечения и парабол указан более строгий порог L ≤ ε; здесь ε трактуется как погрешность координаты x̃.</p><p><b>Бюджет N.</b> Число вызовов f не превышает N. Неполный блок не запускается: блочный поиск может использовать меньше N. Фибоначчи выбирает бюджет до начала поиска. В режиме ε выбирается минимальный бюджет, для которого L₀/Fₙ + δ ≤ 2ε.</p><p><b>Что считается экспериментом.</b> Счётчик включает каждый вызов f внутри поиска, в том числе предварительную локализацию для парабол. Производные учитываются отдельно. Одно итоговое вычисление f(x̃), построение графика и независимая проверка ответа не входят в бюджет поиска. При одинаковом N касательные имеют дополнительную стоимость вычисления f′.</p><p><b>Параметры и вычислительная точность.</b> Для блочного поиска n = 5; для деления пополам n = 3. В режиме ε δ = ε/1000; при заданном N δ = L₀·10⁻⁸. В параболах при совпадении точек выбирается середина более длинной половины. При неразличимых в double значениях сохраняется последний достоверный интервал.</p><p><b>Предпосылки.</b> Интервальные методы предполагают унимодальность. Касательные дополнительно требуют выпуклости и дифференцируемости; в вариантах 7 и 9 используется односторонняя производная на конце интервала. Особые ограничения вариантов 6 и 10 отмечены отдельно.</p></div></details></section>
+      <footer><span>Лабораторная работа №1</span><span>Безусловная одномерная оптимизация</span><span>Условия из МетОпт_ЛР1.pdf, таблица 3.2</span></footer>
+    </div>
+  </main>
+  <noscript>Для вычисления решений включите JavaScript в браузере.</noscript>
+</body>
+</html>
