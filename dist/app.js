@@ -1,10 +1,14 @@
 (() => {
   'use strict';
+  // Интерфейс получает все формулы и расчёты из solver.js; алгоритмы здесь не дублируются.
   const {variants,methods,solve,reference}=Optimization;
   const $=id=>document.getElementById(id);
   const format=(n,digits=6)=>Number.isFinite(n)?n.toLocaleString('ru-RU',{minimumFractionDigits:digits,maximumFractionDigits:digits,useGrouping:false}):'—';
   const compact=n=>Math.abs(n)>0&&Math.abs(n)<.00001?n.toExponential(3).replace('.',','):format(n);
+  // Текущее состояние страницы: вариант, режим, выбранный метод и просмотренный шаг.
   let current=variants[0],mode='budget',method='golden',results=[],ref,stepIndex=0,allSteps=false;
+  // 1. Выбор варианта: обновляем условие, независимый минимум и все результаты.
+  // Номер в адресе #variant=N позволяет открыть нужное решение по прямой ссылке.
   function chooseVariant(id) {
     current=variants.find(v=>v.id===Number(id))||variants[0];
     mode=current.budget?'budget':'epsilon';
@@ -26,6 +30,7 @@
     renderPlot();renderAnalytic();updateMode();calculate();
     if(location.hash!==`#variant=${current.id}`)history.replaceState(null,'',`#variant=${current.id}`);
   }
+  // 2. Настройка поля ввода: целое N либо положительная точность ε.
   function updateMode() {
     $('budget-mode').setAttribute('aria-pressed',String(mode==='budget'));
     $('epsilon-mode').setAttribute('aria-pressed',String(mode==='epsilon'));
@@ -33,11 +38,15 @@
     const input=$('setting-value');input.value=mode==='budget'?current.budget||22:current.epsilon||.001;
     input.min=mode==='budget'?3:.0000001;input.max=mode==='budget'?10000:1;input.step=mode==='budget'?1:'any';
   }
+  // 3. Запускаем все восемь методов с одинаковыми параметрами сравнения.
+  // Ошибку ввода показываем рядом с формой, сохраняя ранее выведенную таблицу.
   function calculate() {
     const value=Number($('setting-value').value),options=mode==='budget'?{mode,budget:value}:{mode,epsilon:value};
     try {results=methods.map(m=>solve(current,m.id,options));$('settings-error').textContent='';}
     catch(e){$('settings-error').textContent=e.message;return;}
     $('comparison-caption').textContent=mode==='budget'?`При N = ${value} сравниваем длину оставшегося интервала.`:`При ε = ${compact(value)} сравниваем количество вычислений функции.`;
+    // Недоступные методы и результаты без достигнутой точности не участвуют в выборе.
+    // При фиксированном N лучше меньший L, при фиксированном ε — меньше вызовов f.
     const eligible=results.filter(r=>!r.unavailable&&r.converged);
     const score=r=>mode==='budget'?r.length:r.evaluations;
     const best=Math.min(...eligible.map(score));
@@ -53,6 +62,8 @@
     if(current.nonunimodal)$('comparison-conclusion').textContent+=' Для этого варианта учитывайте отсутствие гарантии унимодальности.';
     showMethod(method);
   }
+  // 4. Подробное решение выбранного метода: формула, итоговый интервал и счётчики.
+  // При переключении сначала показываем последний шаг, затем можно пройти весь поиск.
   function showMethod(id) {
     method=id;const m=methods.find(m=>m.id===id),r=results.find(r=>r.method===id);
     document.querySelectorAll('.method-button').forEach(button=>{const active=button.dataset.method===id;button.setAttribute('aria-pressed',String(active));button.closest('tr').classList.toggle('selected-row',active);});
@@ -72,6 +83,10 @@
     $('step-slider').max=Math.max(1,r.steps.length);$('step-slider').value=stepIndex+1;
     renderSteps();renderStep();
   }
+  // 5. Таблица журнала из solver.js. Первые 35 строк ограничивают размер страницы;
+  // остальные раскрываются кнопкой без повторного расчёта.
+  // Ползунок меняет только просмотр журнала, а не повторяет вычисления метода.
+  // Координаты полосы интервала выражены в процентах исходного отрезка варианта.
   function renderSteps() {
     const r=results.find(r=>r.method===method),rows=allSteps?r.steps:r.steps.slice(0,35);
     $('steps-body').innerHTML=rows.map((s,i)=>`<tr class="${i===stepIndex?'step-active':''}" data-step="${i}"><td>${s.iteration}</td><td>${format(s.a)}</td><td>${format(s.b)}</td><td>${compact(s.length)}</td><td>${s.points.map(p=>`x = ${format(p.x)}<br>f = ${format(p.y)}`).join('<br>')}</td><td>${s.evaluations}</td></tr>`).join('');
@@ -88,6 +103,8 @@
     document.querySelectorAll('#steps-body tr').forEach(row=>row.classList.toggle('step-active',Number(row.dataset.step)===stepIndex));
     $('previous-step').disabled=stepIndex===0;$('next-step').disabled=stepIndex===r.steps.length-1;
   }
+  // 6. График SVG: 361 точка для линии функции, сетка и независимый минимум.
+  // Эти вызовы f нужны для рисунка и не входят в счётчики поисковых алгоритмов.
   function renderPlot() {
     const W=620,H=285,p={l:51,r:17,t:22,b:35},values=Array.from({length:361},(_,i)=>{const x=current.a+(current.b-current.a)*i/360;return{x,y:current.f(x)};});
     let min=Math.min(...values.map(p=>p.y),ref.y),max=Math.max(...values.map(p=>p.y)),padding=(max-min)*.14||1;
@@ -100,12 +117,15 @@
     const labelX=Math.min(W-123,Math.max(p.l+8,X+16)),labelY=Math.max(p.t+25,Y-30);
     $('plot').innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><title>Вариант ${current.id}: ${current.plain}; минимум x*=${ref.x}</title><defs><linearGradient id="plot-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2957dd" stop-opacity=".09"/><stop offset="1" stop-color="#2957dd" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${path} L${W-p.r},${H-p.b} L${p.l},${H-p.b} Z" fill="url(#plot-fill)"/><line x1="${X}" x2="${X}" y1="${Y}" y2="${H-p.b}" stroke="#e6b56b" stroke-dasharray="4 5"/><path d="${path}" fill="none" stroke="#2957dd" stroke-width="2.5"/><circle cx="${X}" cy="${Y}" r="8" fill="#f8e8ca"/><circle cx="${X}" cy="${Y}" r="4" fill="#eaa136"/><g fill="#8c98ad" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="12">${axes}</g><rect x="${labelX-4}" y="${labelY-16}" width="109" height="24" rx="4" fill="white"/><text x="${labelX+3}" y="${labelY}" fill="#a5782b" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="12">x* = ${format(ref.x,4)}</text></svg>`;
   }
+  // 7. Контрольное решение через аналитическую производную, границы и изломы.
+  // Оно объясняет эталонный ответ отдельно от приближений восьми методов.
   function renderAnalytic() {
     const v=current;
     let explanation=v.id===6?'На [0; 0,2) производная −4 − e^(0,2−x) отрицательна. На (0,2; 2] уравнение производной даёт x* = 0,2 + ln 4. Проверяем также точку излома x = 0,2.':v.id===7?'На [0; 2] имеем |x−2| = 2−x. Производная обращается в ноль при x* = 2 − ln 1,4, а вторая производная положительна.':v.id===9?'На [−1; 0] имеем |x| = −x. Производная обращается в ноль при x* = −ln 10 / 10. Вторая производная 100e^(10x) положительна.':v.id===10?'У производной две стационарные точки: локальный максимум и локальный минимум. Сравниваем значения в обеих точках и на концах [0; 3]. Минимальное из них определяет глобальное решение.': 'Функция строго выпукла на заданном отрезке. Производная меняет знак с минуса на плюс, поэтому её единственный ноль — точка глобального минимума. Корень найден бисекцией аналитической производной; проверяем значения на концах отрезка.';
     let candidates=ref.candidates.slice().sort((a,b)=>a.x-b.x).filter((p,i,a)=>i===0||Math.abs(p.x-a[i-1].x)>1e-9);
     $('analytic-solution').innerHTML=`<div class="analytic"><p>${explanation}</p><div class="derivative">f′(x) = ${v.derivative}</div>${v.exact?`<p><code>${v.exact}</code>.</p>`:''}<div class="candidates">${candidates.map(p=>`<div class="candidate ${Math.abs(p.x-ref.x)<1e-9?'winner':''}">x = ${format(p.x,6)}<b>f(x) = ${format(p.y,8)}</b></div>`).join('')}</div><p>Получаем <code>x* ≈ ${format(ref.x,10)}</code> и <code>f(x*) ≈ ${format(ref.y,10)}</code>. Это независимая проверка для сопоставления с приближениями численных методов.</p></div>`;
   }
+  // 8. Создаём элементы выбора и связываем действия пользователя с функциями выше.
   $('variants').innerHTML=variants.map(v=>`<button class="variant-button" type="button" data-id="${v.id}" aria-current="false"><span class="number">${String(v.id).padStart(2,'0')}</span><span>Вариант ${v.id}</span><span class="variant-type">${v.budget?'N':'ε'}</span></button>`).join('');
   $('mobile-variant').innerHTML=variants.map(v=>`<option value="${v.id}">${v.id}</option>`).join('');
   $('method-select').innerHTML=methods.map(m=>`<option value="${m.id}">${m.short}</option>`).join('');
@@ -121,7 +141,8 @@
   $('more-steps').addEventListener('click',()=>{allSteps=true;renderSteps();});
   window.addEventListener('hashchange',()=>chooseVariant(Number(location.hash.match(/variant=(\d+)/)?.[1]||1)));
   chooseVariant(Number(location.hash.match(/variant=(\d+)/)?.[1]||1));
-  // Reading-only tools use exactly the same calculation and selection as the interface.
+  // Необязательная интеграция WebMCP: выбор варианта меняет состояние страницы,
+  // чтение результатов возвращает уже рассчитанную таблицу без нового поиска.
   if(document.modelContext?.registerTool) {
     const controller=new AbortController();
     const register=tool=>{try{Promise.resolve(document.modelContext.registerTool(tool,{signal:controller.signal})).catch(()=>{});}catch{}};
