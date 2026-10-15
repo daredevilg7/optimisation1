@@ -6,7 +6,7 @@
   const format=(n,digits=6)=>Number.isFinite(n)?n.toLocaleString('ru-RU',{minimumFractionDigits:digits,maximumFractionDigits:digits,useGrouping:false}):'—';
   const compact=n=>Math.abs(n)>0&&Math.abs(n)<.00001?n.toExponential(3).replace('.',','):format(n);
   // Текущее состояние страницы: вариант, режим, выбранный метод и просмотренный шаг.
-  let current=variants[0],mode='budget',method='golden',results=[],ref,stepIndex=0,allSteps=false;
+  let current=variants[0],mode='budget',method='golden',results=[],ref,stepIndex=0,allSteps=false,plotScales=window.OptimizationPlotScales||{};
   // 1. Выбор варианта: обновляем условие, независимый минимум и все результаты.
   // Номер в адресе #variant=N позволяет открыть нужное решение по прямой ссылке.
   function chooseVariant(id) {
@@ -71,7 +71,7 @@
     $('method-letter').textContent=`МЕТОД ${m.letter.toUpperCase()}`;
     $('method-title').textContent=m.name;$('method-description').textContent=m.description;$('method-equation').textContent=m.equation;
     $('steps-details').hidden=!!r.unavailable;
-    if(r.unavailable){$('method-result').textContent=r.reason;return;}
+    if(r.unavailable){$('method-result').textContent=r.reason;$('plot-points').innerHTML='';return;}
     let text=`Итоговый интервал: <code>[${format(r.a,8)}; ${format(r.b,8)}]</code>. Берём его середину: <code>x̃ = ${format(r.x,8)}</code>, <code>f(x̃) = ${format(r.y,8)}</code>.`;
     text+=`<br>Вызовов функции: <b>${r.evaluations}</b>${r.derivatives?`, производной: <b>${r.derivatives}</b>`:''}. ${current.nonunimodal?'Половина длины интервала': 'Граница погрешности L/2'}: <code>${compact(r.errorBound)}</code>.`;
     if(r.method==='dichotomy'||r.method==='passive'||r.method==='fibonacci')text+=` δ = ${r.delta.toExponential(3).replace('.',',')}.`;
@@ -102,20 +102,17 @@
     $('step-interval').innerHTML=`<div class="interval-band" style="left:${left}%;width:${right-left}%"></div><div class="interval-bound" style="left:0"><span>${current.a}</span></div><div class="interval-bound" style="left:100%"><span>${current.b}</span></div><div class="interval-bound" style="left:${left}%"></div><div class="interval-bound" style="left:${right}%"></div><div class="interval-ref" style="left:${position(ref.x)}%" title="x* = ${format(ref.x)}"></div>`;
     document.querySelectorAll('#steps-body tr').forEach(row=>row.classList.toggle('step-active',Number(row.dataset.step)===stepIndex));
     $('previous-step').disabled=stepIndex===0;$('next-step').disabled=stepIndex===r.steps.length-1;
+    renderPlotPoints();
   }
-  // 6. График SVG: 361 точка для линии функции, сетка и независимый минимум.
-  // Эти вызовы f нужны для рисунка и не входят в счётчики поисковых алгоритмов.
+  // 6. Загружаем подготовленный Python-график и накладываем фактические точки поиска.
   function renderPlot() {
-    const W=620,H=285,p={l:51,r:17,t:22,b:35},values=Array.from({length:361},(_,i)=>{const x=current.a+(current.b-current.a)*i/360;return{x,y:current.f(x)};});
-    let min=Math.min(...values.map(p=>p.y),ref.y),max=Math.max(...values.map(p=>p.y)),padding=(max-min)*.14||1;
-    min-=padding;max+=padding;
-    const sx=x=>p.l+(x-current.a)/(current.b-current.a)*(W-p.l-p.r),sy=y=>H-p.b-(y-min)/(max-min)*(H-p.t-p.b);
-    let grid='',axes='';
-    for(let i=0;i<=4;i++){const y=min+(max-min)*i/4,Y=sy(y);grid+=`<line x1="${p.l}" x2="${W-p.r}" y1="${Y}" y2="${Y}" stroke="#e9edf5"/>`;axes+=`<text x="${p.l-12}" y="${Y+4}" text-anchor="end">${format(y,1)}</text>`;}
-    for(let i=0;i<=4;i++){const x=current.a+(current.b-current.a)*i/4,X=sx(x);grid+=`<line x1="${X}" x2="${X}" y1="${p.t}" y2="${H-p.b}" stroke="#f0f3f8"/>`;axes+=`<text x="${X}" y="${H-12}" text-anchor="middle">${format(x,2)}</text>`;}
-    const path=values.map((v,i)=>`${i?'L':'M'}${sx(v.x).toFixed(2)},${sy(v.y).toFixed(2)}`).join(' '),X=sx(ref.x),Y=sy(ref.y);
-    const labelX=Math.min(W-123,Math.max(p.l+8,X+16)),labelY=Math.max(p.t+25,Y-30);
-    $('plot').innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><title>Вариант ${current.id}: ${current.plain}; минимум x*=${ref.x}</title><defs><linearGradient id="plot-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2957dd" stop-opacity=".09"/><stop offset="1" stop-color="#2957dd" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${path} L${W-p.r},${H-p.b} L${p.l},${H-p.b} Z" fill="url(#plot-fill)"/><line x1="${X}" x2="${X}" y1="${Y}" y2="${H-p.b}" stroke="#e6b56b" stroke-dasharray="4 5"/><path d="${path}" fill="none" stroke="#2957dd" stroke-width="2.5"/><circle cx="${X}" cy="${Y}" r="8" fill="#f8e8ca"/><circle cx="${X}" cy="${Y}" r="4" fill="#eaa136"/><g fill="#8c98ad" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="12">${axes}</g><rect x="${labelX-4}" y="${labelY-16}" width="109" height="24" rx="4" fill="white"/><text x="${labelX+3}" y="${labelY}" fill="#a5782b" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="12">x* = ${format(ref.x,4)}</text></svg>`;
+    $('plot-image').src=`plots/variant-${String(current.id).padStart(2,'0')}.svg`;
+    $('plot-image').alt=`График ${current.plain} на отрезке [${current.a}; ${current.b}] с точкой минимума x* = ${format(ref.x,6)}`;
+    renderPlotPoints();
+  }
+  function renderPlotPoints() {
+    const result=results.find(item=>item.method===method),scale=plotScales[current.id];
+    $('plot-points').innerHTML=result&&!result.unavailable?OptimizationPlot.renderSearchPoints(result.steps,stepIndex,scale):'';
   }
   // 7. Контрольное решение через аналитическую производную, границы и изломы.
   // Оно объясняет эталонный ответ отдельно от приближений восьми методов.

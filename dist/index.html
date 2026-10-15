@@ -6,7 +6,7 @@
   <title>Лабораторная №1 · Оптимизация</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232957dd'/%3E%3Cpath d='M6 8Q16 34 26 8' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
-  <script defer src="solver.js"></script><script defer src="app.js"></script>
+  <script defer src="solver.js"></script><script defer src="plot.js"></script><script defer src="plots/scales.js"></script><script defer src="app.js"></script>
 </head>
 <body>
   <aside class="sidebar">
@@ -25,7 +25,7 @@
           <div class="problem-data"><div><span>Отрезок поиска</span><strong id="interval"></strong></div><div><span id="parameter-label"></span><strong id="parameter-value"></strong></div></div>
           <div class="answer"><div class="answer-label">Глобальный минимум<span>Проверка производной и границ</span></div><div class="answer-value"><span>x*</span><strong id="reference-x"></strong></div><div class="answer-secondary"><span>f(x*)</span><strong id="reference-y"></strong></div></div>
         </div>
-        <div class="plot-section"><div class="plot-heading"><h2>График функции</h2><span class="plot-legend"><i></i> f(x)<i class="minimum"></i> минимум</span></div><div id="plot" class="plot" role="img" aria-label="График целевой функции с точкой глобального минимума"></div><div class="plot-caption"><span id="plot-interval"></span><span>Точка x* найдена независимо от методов поиска</span></div></div>
+        <div class="plot-section"><div class="plot-heading"><h2>График функции</h2><span class="plot-legend"><i></i> f(x)<i class="minimum"></i> x*<i class="search"></i> точки метода</span></div><div id="plot" class="plot" role="img" aria-label="График функции с минимумом и проверенными точками метода"><img id="plot-image" class="plot-image" alt=""><svg id="plot-points" class="plot-points" viewBox="0 0 680 320" aria-hidden="true"></svg></div><div class="plot-caption"><span id="plot-interval"></span><span>Точки обновляются при выборе метода и шага</span></div></div>
       </section>
       <div class="notice" id="variant-notice" hidden></div>
       <section class="comparison" aria-labelledby="comparison-title">

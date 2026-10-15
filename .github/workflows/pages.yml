@@ -29,6 +29,11 @@ jobs:
         run: |
           node --check dist/solver.js
           node --check dist/app.js
+          node --check dist/plot.js
+      - name: Verify generated function plots
+        run: python3 tools/generate_plots.py --check
+      - name: Verify plot point rendering
+        run: node --test tests/plot-markers.test.cjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload website
